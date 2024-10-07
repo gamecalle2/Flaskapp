@@ -75,49 +75,71 @@
             sendMessage(); 
         });
 
-        // Load messages from the server
-        function loadMessages() {
-            fetch('/get_messages')
-                .then(response => response.json())
-                .then(messages => {
-                    const chatBox = document.getElementById('chat-box');
-                    chatBox.innerHTML = ''; // Clear the existing messages
+   function loadMessages() {
+    fetch('/get_messages')
+        .then(response => response.json())
+        .then(messages => {
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = ''; // Clear the existing messages
 
-                    messages.forEach(msg => {
-                        const messageDiv = document.createElement('div');
-                        messageDiv.classList.add('message');
-                        messageDiv.innerHTML = `<strong>${msg.username}</strong>: ${msg.message} <span class="timestamp">${msg.timestamp}</span>`;
+            messages.forEach(msg => {
+                const messageDiv = document.createElement('div');
+                messageDiv.classList.add('message');
+                messageDiv.innerHTML = `<strong>${msg.username}</strong>: ${msg.message} <span class="timestamp">${msg.timestamp}</span>`;
 
-                        // Check if it's a voice message or an image
-                        if (msg.image_url) {
-                            if (msg.message === "[Voice Message]") {
-                                const audioPlayer = document.createElement('audio');
-                                audioPlayer.controls = true;
-                                audioPlayer.src = msg.image_url;
-                                messageDiv.appendChild(audioPlayer);
-                            } else {
-                                const imageElement = document.createElement('img');
-                                imageElement.src = msg.image_url;
-                                imageElement.classList.add('chat-image');
-                                messageDiv.appendChild(imageElement);
-                            }
-                        }
+                // Check if it's a voice message or an image
+                if (msg.image_url) {
+                    if (msg.message === "[Voice Message]") {
+                        const audioPlayer = document.createElement('audio');
+                        audioPlayer.controls = true;
+                        audioPlayer.src = msg.image_url;
+                        messageDiv.appendChild(audioPlayer);
+                    } else {
+                        const imageElement = document.createElement('img');
+                        imageElement.src = msg.image_url;
+                        imageElement.classList.add('chat-image');
+                        messageDiv.appendChild(imageElement);
+                    }
+                }
 
-                        // Add delete button only if the message belongs to the current user
-                        if (msg.username === username) {
-                            const deleteButton = document.createElement('button');
-                            deleteButton.innerHTML = 'Delete';
-                            deleteButton.classList.add('delete');
-                            deleteButton.onclick = () => deleteMessage(msg.id);
-                            messageDiv.appendChild(deleteButton);
-                        }
+                // Add delete button only if the message belongs to the current user
+                if (msg.username === username) {
+                    const deleteButton = document.createElement('button');
+                    deleteButton.innerHTML = 'Delete';
+                    deleteButton.classList.add('delete');
+                    deleteButton.onclick = () => deleteMessage(msg.id);
+                    messageDiv.appendChild(deleteButton);
+                }
 
-                        chatBox.appendChild(messageDiv);
-                    });
+                chatBox.appendChild(messageDiv);
 
-                    chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the bottom
-                });
+                // Check if the message is "disco"
+                if (msg.message.toLowerCase() === "disco") {
+                    changeColors();
+                }
+            });
+
+            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the bottom
+        });
+}
+
+// Function to change the background colors randomly
+function changeColors() {
+    const chatBox = document.getElementById('chat-box');
+    const originalColor = chatBox.style.backgroundColor;
+
+    let count = 0;
+    const interval = setInterval(() => {
+        chatBox.style.backgroundColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+        count++;
+
+        if (count >= 10) { // Change color 10 times
+            clearInterval(interval);
+            chatBox.style.backgroundColor = originalColor; // Restore original color
         }
+    }, 300); // Change color every 300ms
+}
+
 
         function deleteMessage(messageId) {
             const formData = new FormData();
@@ -223,6 +245,7 @@
                 }
             });
         }
+        
 
         // Auto-load messages periodically (optional)
         setInterval(loadMessages, 2000);
