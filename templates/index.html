@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Chat</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        /* Style for the image preview */
+        .image-preview {
+            max-width: 200px; /* Set a max-width for the preview */
+            max-height: 200px; /* Set a max-height for the preview */
+            margin-top: 10px; /* Add some space above the preview */
+        }
+        .remove-image-button {
+            margin-top: 10px; /* Add some space above the button */
+            background-color: red; /* Style the button */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div id="chat-box" class="chat-box"></div>
+        <div class="input-container">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            
+            <!-- Custom Send Image Button -->
+            <label for="image-input" class="custom-file-upload">
+                📷 Choose Image
+            </label>
+            <input type="file" id="image-input" accept="image/*" style="display: none;">
+
+            <button id="send-button">Send</button>
+            <button id="record-button" class="mic-button">🎤</button> <!-- Microphone Button -->
+        </div>
+        <img id="image-preview" class="image-preview" style="display: none;" alt="Image Preview">
+        <button id="remove-image-button" class="remove-image-button" style="display: none;">Remove Image</button> <!-- Remove Image Button -->
+    </div>
+
+    <script>
+        const username = "User" + Math.floor(Math.random() * 1000); // Generate random username
+
+        // Function to send a new message
+        function sendMessage() {
+            const message = document.getElementById('message-input').value;
+            const imageFile = document.getElementById('image-input').files[0];
+            const formData = new FormData();
+
+            formData.append('username', username);
+            formData.append('message', message);
+            if (imageFile) {
+                formData.append('image', imageFile);
+            }
+
+            fetch('/send_message', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.status === 204) {
+                    document.getElementById('message-input').value = ''; 
+                    document.getElementById('image-input').value = ''; 
+                    document.getElementById('image-preview').style.display = 'none'; // Hide preview
+                    document.getElementById('remove-image-button').style.display = 'none'; // Hide remove button
+                    loadMessages(); 
+                }
+            });
+        }
+
+        document.getElementById('send-button').addEventListener('click', () => {
+            sendMessage(); 
+        });
+
+        // Load messages from the server
+        function loadMessages() {
+            fetch('/get_messages')
+                .then(response => response.json())
+                .then(messages => {
+                    const chatBox = document.getElementById('chat-box');
+                    chatBox.innerHTML = ''; // Clear the existing messages
+
+                    messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.classList.add('message');
+                        messageDiv.innerHTML = `<strong>${msg.username}</strong>: ${msg.message} <span class="timestamp">${msg.timestamp}</span>`;
+
+                        // Check if it's a voice message or an image
+                        if (msg.image_url) {
+                            if (msg.message === "[Voice Message]") {
+                                const audioPlayer = document.createElement('audio');
+                                audioPlayer.controls = true;
+                                audioPlayer.src = msg.image_url;
+                                messageDiv.appendChild(audioPlayer);
+                            } else {
+                                const imageElement = document.createElement('img');
+                                imageElement.src = msg.image_url;
+                                imageElement.classList.add('chat-image');
+                                messageDiv.appendChild(imageElement);
+                            }
+                        }
+
+                        // Add delete button only if the message belongs to the current user
+                        if (msg.username === username) {
+                            const deleteButton = document.createElement('button');
+                            deleteButton.innerHTML = 'Delete';
+                            deleteButton.classList.add('delete');
+                            deleteButton.onclick = () => deleteMessage(msg.id);
+                            messageDiv.appendChild(deleteButton);
+                        }
+
+                        chatBox.appendChild(messageDiv);
+                    });
+
+                    chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the bottom
+                });
+        }
+
+        function deleteMessage(messageId) {
+            const formData = new FormData();
+            formData.append('username', username);
+
+            fetch(`/delete_message/${messageId}`, {
+                method: 'DELETE',
+                body: formData
+            }).then(response => {
+                if (response.status === 204) {
+                    loadMessages(); // Reload messages after deletion
+                } else {
+                    response.json().then(data => alert(data.error));
+                }
+            });
+        }
+
+        // Preview image when selected
+        document.getElementById('image-input').addEventListener('change', function(event) {
+            const file = event.target.files[0];
+            const preview = document.getElementById('image-preview');
+
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    preview.src = e.target.result; // Set preview source to file data
+                    preview.style.display = 'block'; // Show the preview
+                    document.getElementById('remove-image-button').style.display = 'inline-block'; // Show remove button
+                };
+
+                reader.readAsDataURL(file); // Read the file as a data URL
+            } else {
+                preview.style.display = 'none'; // Hide preview if no file is selected
+                document.getElementById('remove-image-button').style.display = 'none'; // Hide remove button
+            }
+        });
+
+        // Remove image function
+        document.getElementById('remove-image-button').addEventListener('click', function() {
+            document.getElementById('image-input').value = ''; // Reset the file input
+            document.getElementById('image-preview').style.display = 'none'; // Hide preview
+            this.style.display = 'none'; // Hide the remove button
+        });
+
+        document.getElementById('message-input').addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault(); // Prevent new lines
+                sendMessage(); // Call the sendMessage function
+            }
+        });
+
+        // Voice message recording functionality
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const recordButton = document.getElementById('record-button');
+
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            recordButton.addEventListener('mousedown', startRecording);
+            recordButton.addEventListener('mouseup', stopRecording);
+        }
+
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    recordButton.textContent = 'Recording...';
+                    audioChunks = [];
+
+                    mediaRecorder.addEventListener('dataavailable', event => {
+                        audioChunks.push(event.data);
+                    });
+                });
+        }
+
+        function stopRecording() {
+            mediaRecorder.stop();
+            recordButton.textContent = '🎤';
+
+            mediaRecorder.addEventListener('stop', () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+                const audio = new Audio(audioUrl);
+                audio.play();
+
+                sendVoiceMessage(audioBlob);
+            });
+        }
+
+        function sendVoiceMessage(audioBlob) {
+            const formData = new FormData();
+            formData.append('username', username);
+            formData.append('voiceMessage', audioBlob, 'voiceMessage.wav');
+
+            fetch('/send_voice_message', {
+                method: 'POST',
+                body: formData
+            }).then(response => {
+                if (response.status === 204) {
+                    loadMessages();
+                }
+            });
+        }
+
+        // Auto-load messages periodically (optional)
+        setInterval(loadMessages, 2000);
+        loadMessages(); // Initial call to load messages
+    </script>
+
+</body>
+</html>
