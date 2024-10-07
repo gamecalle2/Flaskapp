@@ -6,15 +6,14 @@
     <title>Live Chat</title>
     <link rel="stylesheet" href="/static/style.css">
     <style>
-        /* Style for the image preview */
         .image-preview {
-            max-width: 200px; /* Set a max-width for the preview */
-            max-height: 200px; /* Set a max-height for the preview */
-            margin-top: 10px; /* Add some space above the preview */
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
         }
         .remove-image-button {
-            margin-top: 10px; /* Add some space above the button */
-            background-color: red; /* Style the button */
+            margin-top: 10px;
+            background-color: red;
             color: white;
             border: none;
             padding: 5px 10px;
@@ -28,29 +27,22 @@
         <div id="chat-box" class="chat-box"></div>
         <div class="input-container">
             <input type="text" id="message-input" placeholder="Type your message...">
-            
-            <!-- Custom Send Image Button -->
-            <label for="image-input" class="custom-file-upload">
-                📷 Choose Image
-            </label>
+            <label for="image-input" class="custom-file-upload">📷 Choose Image</label>
             <input type="file" id="image-input" accept="image/*" style="display: none;">
-
             <button id="send-button">Send</button>
-            <button id="record-button" class="mic-button">🎤</button> <!-- Microphone Button -->
+            <button id="record-button" class="mic-button">🎤</button>
         </div>
         <img id="image-preview" class="image-preview" style="display: none;" alt="Image Preview">
-        <button id="remove-image-button" class="remove-image-button" style="display: none;">Remove Image</button> <!-- Remove Image Button -->
+        <button id="remove-image-button" class="remove-image-button" style="display: none;">Remove Image</button>
     </div>
 
     <script>
-        const username = "Skibdi" + Math.floor(Math.random() * 1000); // Generate random username
+        const username = "Skibdi" + Math.floor(Math.random() * 1000);
 
-        // Function to send a new message
         function sendMessage() {
             const message = document.getElementById('message-input').value;
             const imageFile = document.getElementById('image-input').files[0];
             const formData = new FormData();
-
             formData.append('username', username);
             formData.append('message', message);
             if (imageFile) {
@@ -64,8 +56,8 @@
                 if (response.status === 204) {
                     document.getElementById('message-input').value = ''; 
                     document.getElementById('image-input').value = ''; 
-                    document.getElementById('image-preview').style.display = 'none'; // Hide preview
-                    document.getElementById('remove-image-button').style.display = 'none'; // Hide remove button
+                    document.getElementById('image-preview').style.display = 'none'; 
+                    document.getElementById('remove-image-button').style.display = 'none'; 
                     loadMessages(); 
                 }
             });
@@ -75,71 +67,68 @@
             sendMessage(); 
         });
 
-   function loadMessages() {
-    fetch('/get_messages')
-        .then(response => response.json())
-        .then(messages => {
-            const chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML = ''; // Clear the existing messages
+        function loadMessages() {
+            fetch('/get_messages')
+                .then(response => response.json())
+                .then(messages => {
+                    const chatBox = document.getElementById('chat-box');
+                    chatBox.innerHTML = ''; 
 
-            messages.forEach(msg => {
-                const messageDiv = document.createElement('div');
-                messageDiv.classList.add('message');
-                messageDiv.innerHTML = `<strong>${msg.username}</strong>: ${msg.message} <span class="timestamp">${msg.timestamp}</span>`;
+                    messages.forEach(msg => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.classList.add('message');
+                        messageDiv.innerHTML = `<strong>${msg.username}</strong>: ${msg.message} <span class="timestamp">${msg.timestamp}</span>`;
 
-                // Check if it's a voice message or an image
-                if (msg.image_url) {
-                    if (msg.message === "[Voice Message]") {
-                        const audioPlayer = document.createElement('audio');
-                        audioPlayer.controls = true;
-                        audioPlayer.src = msg.image_url;
-                        messageDiv.appendChild(audioPlayer);
-                    } else {
-                        const imageElement = document.createElement('img');
-                        imageElement.src = msg.image_url;
-                        imageElement.classList.add('chat-image');
-                        messageDiv.appendChild(imageElement);
-                    }
-                }
+                        if (msg.image_url) {
+                            if (msg.message === "[Voice Message]") {
+                                const audioPlayer = document.createElement('audio');
+                                audioPlayer.controls = true;
+                                audioPlayer.src = msg.image_url;
+                                messageDiv.appendChild(audioPlayer);
+                            } else {
+                                const imageElement = document.createElement('img');
+                                imageElement.src = msg.image_url;
+                                imageElement.classList.add('chat-image');
+                                messageDiv.appendChild(imageElement);
+                            }
+                        }
 
-                // Add delete button only if the message belongs to the current user
-                if (msg.username === username) {
-                    const deleteButton = document.createElement('button');
-                    deleteButton.innerHTML = 'Delete';
-                    deleteButton.classList.add('delete');
-                    deleteButton.onclick = () => deleteMessage(msg.id);
-                    messageDiv.appendChild(deleteButton);
-                }
+                        if (msg.username === username) {
+                            const deleteButton = document.createElement('button');
+                            deleteButton.innerHTML = 'Delete';
+                            deleteButton.classList.add('delete');
+                            deleteButton.onclick = () => deleteMessage(msg.id);
+                            messageDiv.appendChild(deleteButton);
+                        }
 
-                chatBox.appendChild(messageDiv);
+                        chatBox.appendChild(messageDiv);
 
-                // Check if the message is "disco"
-                if (msg.message.toLowerCase() === "disco") {
-                    changeColors();
-                }
-            });
+                        if (msg.message.toLowerCase() === "disco") {
+                            changeColors();
+                        }
+                    });
 
-            chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the bottom
-        });
-}
-
-// Function to change the background colors randomly
-function changeColors() {
-    const chatBox = document.getElementById('chat-box');
-    const originalColor = chatBox.style.backgroundColor;
-
-    let count = 0;
-    const interval = setInterval(() => {
-        chatBox.style.backgroundColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
-        count++;
-
-        if (count >= 10) { // Change color 10 times
-            clearInterval(interval);
-            chatBox.style.backgroundColor = originalColor; // Restore original color
+                    chatBox.scrollTop = chatBox.scrollHeight; 
+                });
         }
-    }, 300); // Change color every 300ms
-}
 
+        function changeColors() {
+            const chatBox = document.getElementById('chat-box');
+            const originalColor = chatBox.style.backgroundColor;
+
+            let count = 0;
+            const interval = setInterval(() => {
+                chatBox.style.backgroundColor = `#${Math.floor(Math.random() * 16777215).toString(16)}`;
+                count++;
+
+                if (count >= 10) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        chatBox.style.backgroundColor = originalColor;
+                    }, 3000);
+                }
+            }, 300); 
+        }
 
         function deleteMessage(messageId) {
             const formData = new FormData();
@@ -150,14 +139,13 @@ function changeColors() {
                 body: formData
             }).then(response => {
                 if (response.status === 204) {
-                    loadMessages(); // Reload messages after deletion
+                    loadMessages(); 
                 } else {
                     response.json().then(data => alert(data.error));
                 }
             });
         }
 
-        // Preview image when selected
         document.getElementById('image-input').addEventListener('change', function(event) {
             const file = event.target.files[0];
             const preview = document.getElementById('image-preview');
@@ -166,33 +154,31 @@ function changeColors() {
                 const reader = new FileReader();
 
                 reader.onload = function(e) {
-                    preview.src = e.target.result; // Set preview source to file data
-                    preview.style.display = 'block'; // Show the preview
-                    document.getElementById('remove-image-button').style.display = 'inline-block'; // Show remove button
+                    preview.src = e.target.result; 
+                    preview.style.display = 'block'; 
+                    document.getElementById('remove-image-button').style.display = 'inline-block'; 
                 };
 
-                reader.readAsDataURL(file); // Read the file as a data URL
+                reader.readAsDataURL(file); 
             } else {
-                preview.style.display = 'none'; // Hide preview if no file is selected
-                document.getElementById('remove-image-button').style.display = 'none'; // Hide remove button
+                preview.style.display = 'none'; 
+                document.getElementById('remove-image-button').style.display = 'none'; 
             }
         });
 
-        // Remove image function
         document.getElementById('remove-image-button').addEventListener('click', function() {
-            document.getElementById('image-input').value = ''; // Reset the file input
-            document.getElementById('image-preview').style.display = 'none'; // Hide preview
-            this.style.display = 'none'; // Hide the remove button
+            document.getElementById('image-input').value = ''; 
+            document.getElementById('image-preview').style.display = 'none'; 
+            this.style.display = 'none'; 
         });
 
         document.getElementById('message-input').addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
-                event.preventDefault(); // Prevent new lines
-                sendMessage(); // Call the sendMessage function
+                event.preventDefault(); 
+                sendMessage(); 
             }
         });
 
-        // Voice message recording functionality
         let mediaRecorder;
         let audioChunks = [];
 
@@ -245,12 +231,9 @@ function changeColors() {
                 }
             });
         }
-        
 
-        // Auto-load messages periodically (optional)
         setInterval(loadMessages, 2000);
-        loadMessages(); // Initial call to load messages
+        loadMessages(); 
     </script>
-
 </body>
 </html>
