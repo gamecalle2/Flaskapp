@@ -69,7 +69,7 @@ def send_voice_message():
             'username': request.form['username'],
             'message': '[Voice Message]',
             'image_url': url_for('static', filename=f'uploads/{filename}'),
-            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            'timestamp': datetime.datetime.now().strftime('%Y-%m-%d')
         }
         messages.append(voice_message_data)
         return '', 204
