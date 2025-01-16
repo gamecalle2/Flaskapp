@@ -5,23 +5,18 @@ import datetime
 
 app = Flask(__name__)
 
-# Configuration for file uploads
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB max size
 
-# In-memory message storage (for demo purposes, replace with a database in production)
 messages = []
 
-# Ensure upload folder exists
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
 
-# Route to serve the chat page
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Route to handle text and image message uploads
 @app.route('/send_message', methods=['POST'])
 def send_message():
     username = request.form['username']
@@ -35,7 +30,6 @@ def send_message():
             image_file.save(os.path.join(app.config['UPLOAD_FOLDER'], image_filename))
             image_url = url_for('static', filename=f'uploads/{image_filename}')
 
-    # Save the message to the list (or database in a real app)
     new_message = {
         'id': len(messages) + 1,
         'username': username,
@@ -47,7 +41,6 @@ def send_message():
 
     return '', 204
 
-# Route to handle voice message uploads
 @app.route('/send_voice_message', methods=['POST'])
 def send_voice_message():
     if 'voiceMessage' not in request.files:
@@ -58,12 +51,10 @@ def send_voice_message():
         return jsonify({'error': 'No selected file'}), 400
     
     if voice_file:
-        # Save the voice message file
         filename = secure_filename(voice_file.filename)
         voice_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         voice_file.save(voice_path)
 
-        # Store the message as a voice message
         voice_message_data = {
             'id': len(messages) + 1,
             'username': request.form['username'],
@@ -76,12 +67,10 @@ def send_voice_message():
 
     return jsonify({'error': 'File upload failed'}), 500
 
-# Route to fetch all messages
 @app.route('/get_messages')
 def get_messages():
     return jsonify(messages)
 
-# Route to delete a message
 @app.route('/delete_message/<int:message_id>', methods=['DELETE'])
 def delete_message(message_id):
     username = request.form['username']
@@ -93,6 +82,5 @@ def delete_message(message_id):
     else:
         return jsonify({'error': 'Message not found or unauthorized'}), 403
 
-# Main function to run the Flask app
 if __name__ == '__main__':
     app.run(debug=True)
